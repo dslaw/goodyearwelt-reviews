@@ -127,7 +127,7 @@ def get_id(url: str) -> Optional[str]:
     # NB: This only holds for the urls we are interested in, not in the general
     #     case.
     parsed = urlparse(url)
-    end = parsed.path.split("/")[-1]
+    *_, end = [slug for slug in parsed.path.split("/") if slug]
     id_, *_ = end.split("#")  # Split off anchor link if it exists.
     return Path(id_).stem  # Remove extension if it exists.
 

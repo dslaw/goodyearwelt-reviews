@@ -116,6 +116,7 @@ class TestGetID(object):
         "url, expected", [
             ("https://imgur.com/a/ABCDEFG", "ABCDEFG"),
             ("https://imgur.com/a/ABCDEFG#image.jpg", "ABCDEFG"),
+            ("https://imgur.com/a/ABCDEFG/", "ABCDEFG"),
             ("https://imgur.com/gallery/ABCDEFG", "ABCDEFG"),
             ("https://imgur.com/ABCDEFG", "ABCDEFG"),
             ("https://imgur.com/ABCDEFG.jpg", "ABCDEFG"),
@@ -124,6 +125,7 @@ class TestGetID(object):
         ], ids=[
             "album",
             "album:anchor",
+            "trailing",
             "gallery",
             "image:page",
             "image:direct",
