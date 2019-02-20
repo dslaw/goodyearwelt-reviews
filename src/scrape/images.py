@@ -3,7 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 import logging
 import requests
 import sqlite3
@@ -80,6 +80,16 @@ class ImgurClient(Client):
         reset_time_iso8601 = datetime.fromtimestamp(reset_time).isoformat()
         raise RateLimitError(f"Rate limited by Imgur until {reset_time_iso8601}")
 
+    def get_image(self, url: str, **metadata) -> Image:
+        # Certain subdomain(s) reject requests with the authorization header
+        # set (specifically, `i.imgur.com`). Removing the authorization
+        # header and keeping the subdomain also works.
+        #
+        # XXX: `url` cannot be a request to the API (eg
+        # `api.imgur.com/3/image/{hash}`) or this will fail.
+        url = strip_imgur_subdomain(url)
+        return super().get_image(url, **metadata)
+
     def get_json(self, url: str) -> Optional[Any]:
         headers = {**self.headers, "Accept": "application/json"}
         response = requests.request("GET", url, headers=headers, timeout=self.timeout)
@@ -134,6 +144,14 @@ def get_id(url: str) -> Optional[str]:
 def make_imgur_url(resource_type: str, hash_: str) -> str:
     api_url = f"https://api.imgur.com/{IMGUR_API_VERSION}/{resource_type}/{hash_}"
     return api_url
+
+def strip_imgur_subdomain(url: str) -> str:
+    parsed = urlparse(url)
+    parts = parsed.netloc.split(".")
+    if len(parts) >= 2 and parts[-2] == "imgur" and parts[-1] == "com":
+        replaced = parsed._replace(netloc="imgur.com")
+        return urlunparse(replaced)
+    return url
 
 def is_imgur(url: str) -> bool:
     parsed = urlparse(url)
@@ -236,7 +254,7 @@ def main() -> int:
         logging.error("Rate limited, saving progress: %s", e)
         conn.commit()
         status = 1
-    except sqlite3.Error as e:
+    except Exception as e:
         logging.error("Encountered error, aborting: %s", e)
         conn.rollback()
         status = 1

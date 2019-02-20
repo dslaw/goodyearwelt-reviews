@@ -15,6 +15,7 @@ from src.scrape.images import (
     is_imgur,
     make_imgur_url,
     sniff_imgur_resource,
+    strip_imgur_subdomain,
 )
 
 
@@ -141,6 +142,27 @@ class TestMakeImgurURL(object):
     def test_imgur_api_url(self):
         api_url = make_imgur_url("album", "ABCDEFG")
         assert api_url.endswith("album/ABCDEFG")
+
+class TestStripImgurSubdomain(object):
+    @pytest.mark.parametrize(
+        "url", [
+            "https://imgur.com/a/foo",
+            "https://i.imgur.com/a/foo",
+            "https://m.imgur.com/a/foo",
+        ], ids=["plain", "subdomain:i", "subdomain:m"]
+    )
+    def test_strips(self, url):
+        expected = "https://imgur.com/a/foo"
+        assert strip_imgur_subdomain(url) == expected
+
+    @pytest.mark.parametrize(
+        "url", [
+            "https://mock-imgur.com/a/foo",
+            "https://i.redd.it/foo.jpg",
+        ], ids=["mock", "redd.it"]
+    )
+    def test_passes(self, url):
+        assert strip_imgur_subdomain(url) == url
 
 class TestIsImgur(object):
     @pytest.mark.parametrize(
