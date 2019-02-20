@@ -1,20 +1,9 @@
 import json
 import pytest
 import responses
-import sqlite3
 
 from src.scrape.subreddit import extract_submissions, ingest, paginated_search
 
-
-with open("db/schema.sql") as fh:
-    setup_sql = fh.read()
-
-@pytest.fixture
-def cursor():
-    conn = sqlite3.connect(":memory:")
-    conn.executescript(setup_sql)
-    yield conn.cursor()
-    conn.close()
 
 @pytest.fixture(scope="module")
 def listing():

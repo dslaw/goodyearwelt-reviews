@@ -2,7 +2,6 @@ from requests import HTTPError
 import json
 import pytest
 import responses
-import sqlite3
 
 from src.scrape.images import (
     Client,
@@ -24,17 +23,6 @@ def imgur_album():
     with open("tests/data/imgur-album.json") as fh:
         data = json.load(fh)
     return data
-
-@pytest.fixture
-def cursor():
-    with open("db/schema.sql") as fh:
-        schema = fh.read()
-
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-    cursor.executescript(schema)
-    yield cursor
-    conn.close()
 
 def insert_submission(cursor, s_id):
     cursor.execute(
