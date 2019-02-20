@@ -71,7 +71,7 @@ class Submission:
     search_query: str
 
     def __post_init__(self, num_comments: int, **_):
-        setattr(self, "comments", num_comments)
+        self.comments = num_comments
 
 @dataclass
 class Media:
@@ -79,3 +79,40 @@ class Media:
     url: str
     is_direct: bool
     txt: Optional[str]
+
+@dataclass
+class Album:
+    id: str
+    media_id: int
+    title: Optional[str]
+    description: Optional[str]
+    datetime: InitVar[int]
+    uploaded_utc: int = field(init=False)
+    link: InitVar[str]
+    url: str = field(init=False)
+    views: int
+
+    def __post_init__(self, datetime: int, link: str, **_):
+        self.uploaded_utc = datetime
+        self.url = link
+
+@dataclass
+class Image:
+    id: str
+    media_id: int
+    album_id: Optional[str]
+    title: Optional[str]
+    description: Optional[str]
+    datetime: InitVar[Optional[int]]
+    uploaded_utc: Optional[int] = field(init=False)
+    type: InitVar[Optional[str]]
+    mimetype: Optional[str] = field(init=False)
+    link: InitVar[str]
+    url: str = field(init=False)
+    views: Optional[int]
+    img: Optional[bytes]
+
+    def __post_init__(self, datetime: int, type: str, link: str, **_):
+        self.uploaded_utc = datetime
+        self.mimetype = type
+        self.url = link

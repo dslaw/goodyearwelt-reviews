@@ -26,3 +26,33 @@ create table medias (
     txt varchar,
     foreign key (submission_id) references submissions(id)
 );
+
+create table albums (
+    id varchar primary key,
+    media_id integer not null,
+    title varchar,
+    description varchar,
+    uploaded_utc integer not null,
+    url varchar not null,
+    views integer not null,
+
+    date_created datetime default current_timestamp,
+    foreign key (media_id) references medias(id)
+);
+
+create table images (
+    id varchar primary key,
+    media_id integer not null,
+    album_id varchar,
+    title varchar,
+    description varchar,
+    uploaded_utc integer,
+    mimetype varchar,
+    url varchar not null,
+    views integer,
+    img blob,
+
+    date_created datetime default current_timestamp,
+    foreign key (media_id) references medias(id),
+    foreign key (album_id) references albums(id)
+);
