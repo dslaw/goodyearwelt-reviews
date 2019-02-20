@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from typing import Callable, TypeVar
+from urllib.parse import urlparse
 import sqlite3
 
 
@@ -22,3 +23,13 @@ def insert_or_ignore(cursor: sqlite3.Cursor, table: str, instance: object) -> No
     sql = f"insert or ignore into {table} ({targets}) values ({params})"
     cursor.execute(sql, values)
     return
+
+def is_media_url(url: str) -> bool:
+    parsed = urlparse(url)
+    domain = parsed.netloc
+
+    # Domain may include a prefix for images/mobile/etc.,
+    # e.g. `m.imgur.com`, `i.redd.it`.
+    is_imgur = domain.endswith("imgur.com")
+    is_reddit = domain.endswith("redd.it") or domain.endswith("reddituploads.com")
+    return is_imgur or is_reddit
