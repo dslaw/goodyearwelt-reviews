@@ -24,6 +24,39 @@ def imgur_album():
         data = json.load(fh)
     return data
 
+def add_image(url, body):
+    mimetype = "image/jpeg"
+    headers = {"Content-Type": mimetype}
+    responses.add(responses.GET, url, body=body, headers=headers)
+    return mimetype
+
+def add_album_response(raw_album, img_body):
+    data = raw_album["data"]
+    album_id = data.get("id", "a_id")
+
+    url = f"https://mock-imgur.com/a/{album_id}"
+    api_url = f"https://api.imgur.com/3/album/{album_id}"
+
+    # Ensure links point to mocked urls.
+    data["id"] = album_id
+    data["link"] = url
+
+    # Point images to mocked urls.
+    for i, img in enumerate(data["images"]):
+        img["id"] = str(i)
+        img_url = f"https://mock-imgur.com/{i}.jpg"
+        md_url = f"https://api.imgur.com/3/image/{i}"
+        img["link"] = img_url
+
+        add_image(img_url, img_body)
+        responses.add(responses.GET, md_url, json={"data": img})
+
+    responses.add(responses.GET, url, status=500)
+    responses.add(responses.GET, api_url, json=raw_album)
+
+    # Return updated data and mocked API url.
+    return raw_album, api_url
+
 def insert_submission(cursor, s_id):
     cursor.execute(
         """
@@ -160,23 +193,18 @@ class TestGetLinks(object):
             (2, "https://imgur.com/a/bar"),
             (3, "https://imgur.com/a/baz"),
         ]
-        for media in medias:
-            cursor.execute(
-                """
-                insert into medias (id, submission_id, url, is_direct)
-                values (?, 's_id', ?, 0)
-                """,
-                media
-            )
+        for id_, url in medias:
+            insert_media(cursor, id_, "s_id", url)
 
-        # Add a "processed" image.
+        # Add a "processed" image, linked to the first media row.
+        (processed_media_id, _), *expected = medias
         cursor.execute(
             """
             insert into images (id, media_id, url)
-            values ('1', 3, 'https://imgur.com/baz-image.jpg')
-            """
+            values ('1', ?, 'https://imgur.com/baz-image.jpg')
+            """,
+            (processed_media_id,)
         )
-        expected = medias[:2]
 
         medias = get_links(cursor)
 
@@ -184,25 +212,22 @@ class TestGetLinks(object):
 
 class TestClient(object):
     url = "https://mock-imgur.com/image.jpg"
+    body = b"data"
 
     @responses.activate
     def test_gets_image(self):
-        mimetype = "image/jpeg"
-        headers = {"Content-Type": mimetype}
-        responses.add(responses.GET, self.url, body=b"data", headers=headers)
+        mimetype = add_image(self.url, self.body)
 
         client = Client()
         image = client.get_image(self.url)
 
         assert image.url == self.url
         assert image.mimetype == mimetype
-        assert image.img == b"data"
+        assert image.img == self.body
 
     @responses.activate
     def test_metadata_is_propagated(self):
-        mimetype = "image/jpeg"
-        headers = {"Content-Type": mimetype}
-        responses.add(responses.GET, self.url, body=b"data", headers=headers)
+        add_image(self.url, self.body)
 
         client = Client()
         image = client.get_image(self.url, id="image", media_id=1)
@@ -288,23 +313,15 @@ class TestImgurClient(object):
 
     @responses.activate
     def test_gets_album(self, imgur_album):
-        url = "https://mock-imgur.com/a/foo"
-        image_url = "https://mock-imgur.com/image.jpg"
-        image_headers = {"Content-Type": "image/jpeg"}
-
-        data = imgur_album["data"]
-        data["link"] = url
-        data["images"] = [{**img, "link": image_url} for img in data["images"]]
-
-        responses.add(responses.GET, url, json=imgur_album)
-        responses.add(responses.GET, image_url, body=b"data", headers=image_headers)
+        imgur_album, url = add_album_response(imgur_album, img_body=b"data")
+        album_data = imgur_album["data"]
 
         client = ImgurClient("test")
         album, images = client.get_album(url, media_id=1)
 
-        assert album.id == data["id"]
+        assert album.id == album_data["id"]
         assert album.media_id == 1
-        assert len(images) == len(data["images"])
+        assert len(images) == len(album_data["images"])
         assert all(image.album_id == album.id for image in images)
         assert all(image.media_id == 1 for image in images)
 
@@ -312,20 +329,17 @@ class TestIngestStandalones(object):
     @responses.activate
     def test_reddit_standalone(self, cursor):
         url = "https://mock.i.redd.it/image.jpg"
-        mimetype = "image/jpeg"
         body = b"data"
-        headers = {"Content-Type": mimetype}
-
-        media_id = 1
-        expected = [
-            ("image", media_id, None, None, None, None, mimetype, url, None, body)
-        ]
+        mimetype = add_image(url, body)
 
         # FK constraints.
+        media_id = 1
         insert_submission(cursor, "s_id")
         insert_media(cursor, media_id, "s_id", url)
 
-        responses.add(responses.GET, url, body=body, headers=headers)
+        expected = [
+            ("image", media_id, None, None, None, None, mimetype, url, None, body)
+        ]
 
         medias = [(media_id, url)]
         client = Client()
@@ -346,9 +360,8 @@ class TestIngestStandalones(object):
     @responses.activate
     def test_imgur_standalone(self, cursor):
         url = "https://mock-imgur/image.jpg"
-        mimetype = "image/jpeg"
         body = b"data"
-        headers = {"Content-Type": mimetype}
+        mimetype = add_image(url, body)
 
         md_url = "https://api.imgur.com/3/image/image"
         md = {
@@ -361,19 +374,17 @@ class TestIngestStandalones(object):
                 "link": url,
             }
         }
+        responses.add(responses.GET, md_url, json=md)
 
+        # FK constraints.
         media_id = 1
+        insert_submission(cursor, "s_id")
+        insert_media(cursor, media_id, "s_id", url)
+
         expected = [(
             "image", media_id, None, None, md["data"]["description"],
             md["data"]["datetime"], mimetype, url, md["data"]["views"], body
         )]
-
-        # FK constraints.
-        insert_submission(cursor, "s_id")
-        insert_media(cursor, media_id, "s_id", url)
-
-        responses.add(responses.GET, url, body=body, headers=headers)
-        responses.add(responses.GET, md_url, json=md)
 
         medias = [(media_id, url)]
         client = Client()
@@ -394,31 +405,15 @@ class TestIngestStandalones(object):
 class TestIngestAlbums(object):
     @responses.activate
     def test_imgur_album(self, cursor, imgur_album):
-        album_id = "a_id"
-        url = f"https://mock-imgur.com/a/{album_id}"
-        api_url = f"https://api.imgur.com/3/album/{album_id}"
+        img_body = b"data"
+        imgur_album, _ = add_album_response(imgur_album, img_body=img_body)
+
         album_data = imgur_album["data"]
-        album_data["id"] = album_id
-        album_data["link"] = url
-
-        headers = {"Content-Type": "image/jpeg"}
-        for i, img in enumerate(album_data["images"]):
-            img["id"] = str(i)
-            # Actual image.
-            img_url = f"https://mock-imgur.com/{i}.jpg"
-            img["link"] = img_url
-            responses.add(responses.GET, img_url, body=b"data", headers=headers)
-
-            # Image metadata.
-            md_url = f"https://api.imgur.com/3/image/{i}"
-            responses.add(responses.GET, md_url, json={"data": img})
-
-        responses.add(responses.GET, api_url, json=imgur_album)
-        responses.add(responses.GET, url, status=400)  # Capture, just in case.
-
-        media_id = 1
+        url = album_data["link"]  # Non-API URL.
+        album_id = album_data["id"]
 
         # FK constraints.
+        media_id = 1
         insert_submission(cursor, "s_id")
         insert_media(cursor, media_id, "s_id", url)
 
@@ -428,8 +423,8 @@ class TestIngestAlbums(object):
         )]
         expected_images = [
             (img["id"], media_id, album_id, img["title"], img["description"],
-             img["datetime"], headers["Content-Type"], img["link"], img["views"],
-             b"data")
+             img["datetime"], "image/jpeg", img["link"], img["views"],
+             img_body)
             for img in album_data["images"]
         ]
 
