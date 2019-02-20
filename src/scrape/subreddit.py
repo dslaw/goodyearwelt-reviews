@@ -1,26 +1,19 @@
 """Get Reddit submissions that match the search criteria."""
 
 from typing import Any, Dict, Iterator, List, Tuple, Optional
-import argparse
 import logging
 import requests
 import sqlite3
 import sys
 
 from src.scrape.common import (
+    base_parser,
     from_json,
     insert_or_ignore,
     is_media_url,
+    setup_logging,
 )
 from src.scrape.models import Media, Submission
-
-
-logging.basicConfig(
-    stream=sys.stdout,
-    level=logging.INFO,
-    format="%(asctime)s:%(module)s:%(levelname)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 
 MAX_LIMIT = 100
@@ -107,8 +100,8 @@ def ingest(cursor: sqlite3.Cursor, query: str, subreddit: str) -> None:
     return
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-c", "--conn", type=str, help="Database connection string.")
+    setup_logging()
+    parser = base_parser(description=__doc__)
     parser.add_argument("-q", "--query", type=str, help="Query string.")
     args = parser.parse_args()
 

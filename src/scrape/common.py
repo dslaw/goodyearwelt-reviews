@@ -1,7 +1,10 @@
 from dataclasses import asdict
 from typing import Callable, TypeVar
 from urllib.parse import urlparse
+import argparse
+import logging
 import sqlite3
+import sys
 
 
 PLACEHOLDER = "?"
@@ -33,3 +36,16 @@ def is_media_url(url: str) -> bool:
     is_imgur = domain.endswith("imgur.com")
     is_reddit = domain.endswith("redd.it") or domain.endswith("reddituploads.com")
     return is_imgur or is_reddit
+
+def setup_logging() -> None:
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.INFO,
+        format="%(asctime)s:%(module)s:%(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+def base_parser(**kwds) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(**kwds)
+    parser.add_argument("-c", "--conn", type=str, help="Database connection string.")
+    return parser
