@@ -203,6 +203,8 @@ def ingest_albums(cursor: sqlite3.Cursor, client: ImgurClient, medias: List[Tupl
         for image in images:
             insert_or_ignore(cursor, "images", image)
 
+        logging.info("Processed %s", url)
+
     return
 
 def ingest_standalones(cursor: sqlite3.Cursor, client: Client, imgur_client: ImgurClient, medias: List[Tuple[int, str]]) -> None:  # noqa: E501
@@ -227,6 +229,7 @@ def ingest_standalones(cursor: sqlite3.Cursor, client: Client, imgur_client: Img
             image = client.get_image(url, **metadata)
 
         insert_or_ignore(cursor, "images", image)
+        logging.info("Processed %s", url)
 
     return
 
@@ -273,6 +276,7 @@ def main() -> int:
         conn.commit()
     finally:
         conn.close()
+        logging.info("Finished ingesting images")
 
     return status
 
