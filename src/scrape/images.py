@@ -1,8 +1,7 @@
 """Get linked images and album metadata."""
 
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple
 from urllib.parse import urlparse, urlunparse
 import logging
 import requests
@@ -61,6 +60,8 @@ class Client(object):
         return from_json(Image, **updated_data)
 
 class ImgurClient(Client):
+    min_stopping_credits = 3
+
     def __init__(self, client_id: str) -> None:
         self.client_id = client_id
 
@@ -68,17 +69,21 @@ class ImgurClient(Client):
     def headers(self) -> Dict[str, str]:
         return {"Authorization": f"Client-ID {self.client_id}"}
 
-    def on_failure(self, response: requests.Response) -> None:
-        # Check if we're throttled.
-        headers = response.headers
-        user_requests_remaining = headers.get("X-RateLimit-UserRemaining")
-        if user_requests_remaining is None or int(user_requests_remaining) > 0:
-            super().on_failure(response)
-            return None
+    def near_rate_limit(self, headers: MutableMapping[str, str]) -> bool:
+        def hit_threshold(who: str) -> bool:
+            credits = headers.get(f"X-RateLimit-{who}Remaining")
+            if credits is None:
+                return False
+            return int(credits) <= self.min_stopping_credits
 
-        reset_time = int(headers["X-RateLimit-UserReset"])
-        reset_time_iso8601 = datetime.fromtimestamp(reset_time).isoformat()
-        raise RateLimitError(f"Rate limited by Imgur until {reset_time_iso8601}")
+        return hit_threshold("User") or hit_threshold("Client")
+
+    def on_failure(self, response: requests.Response) -> None:
+        if response.status_code == 429:
+            raise RateLimitError("Rate limited by Imgur")
+
+        super().on_failure(response)
+        return None
 
     def get_image(self, url: str, **metadata) -> Image:
         # Certain subdomain(s) reject requests with the authorization header
@@ -96,6 +101,12 @@ class ImgurClient(Client):
         if not response.ok:
             self.on_failure(response)
             return None
+
+        # Check if we're near to the rate limit - if it is hit too many
+        # times, Imgur will penalize the client account.
+        if self.near_rate_limit(response.headers):
+            raise RateLimitError(f"Stopping before rate limit reached")
+
         return response.json()
 
     def get_album(self, url: str, media_id: int) -> Optional[Tuple[Album, List[Image]]]:

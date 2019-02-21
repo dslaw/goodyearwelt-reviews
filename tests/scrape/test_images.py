@@ -322,7 +322,7 @@ class TestImgurClient(object):
         responses.add(
             responses.GET,
             url,
-            status=400,  # XXX: Not sure what Imgur uses.
+            status=429,
             body="Limit reached.",
             headers={
                 "X-RateLimit-UserCredit": "500",
