@@ -21,7 +21,7 @@ class RateLimitError(Exception):
 
 class Client(object):
     fail_on_statuses = (401, 403)
-    timeout = 30
+    timeout = 60
 
     @property
     def headers(self) -> Optional[Dict[str, str]]:
@@ -250,8 +250,8 @@ def main() -> int:
         ingest_albums(cursor, imgur_client, album_medias)
         logging.info("Ingesting standalone media")
         ingest_standalones(cursor, generic_client, imgur_client, standalone_medias)
-    except RateLimitError as e:
-        logging.error("Rate limited, saving progress: %s", e)
+    except (RateLimitError, requests.Timeout) as e:
+        logging.error("Transient HTTP error, saving progress: %s", e)
         conn.commit()
         status = 1
     except Exception as e:
