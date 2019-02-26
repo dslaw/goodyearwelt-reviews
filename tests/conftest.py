@@ -2,7 +2,7 @@ import pytest
 import sqlite3
 
 
-with open("db/schema.sql") as fh:
+with open("src/sql/schema.sql") as fh:
     setup_sql = fh.read()
 
 @pytest.fixture
