@@ -6,7 +6,6 @@ from typing import List, Iterable
 import html
 import re
 import sqlite3
-import sys
 
 from src.scrape.common import base_parser
 
@@ -88,7 +87,7 @@ def make_annotations(doc: str, brands: Iterable[str], id_: str) -> List[Annotati
             )
     return annotations
 
-def main() -> int:
+def main() -> None:
     parser = base_parser(description=__doc__)
     parser.add_argument("-b", "--brands", type=str, help="File containing known brands.")
     parser.add_argument("-d", "--dst", type=str, help="Output file")
@@ -111,7 +110,8 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(map(asdict, annotations))
 
-    return 1
+    return
+
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
