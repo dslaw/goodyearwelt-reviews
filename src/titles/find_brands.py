@@ -2,7 +2,7 @@
 
 from csv import DictWriter
 from dataclasses import asdict, dataclass, fields
-from typing import List, Iterable
+from typing import List, Iterable, Tuple
 import html
 import re
 import sqlite3
@@ -66,7 +66,7 @@ def process(title: str) -> str:
 
 @dataclass(frozen=True)
 class Annotation:
-    submission_id: str
+    id: str
     brand: str
     start_pos: int
     end_pos: int
@@ -79,13 +79,24 @@ def make_annotations(doc: str, brands: Iterable[str], id_: str) -> List[Annotati
         for match in re.finditer(brand, doc, flags=re.IGNORECASE):
             annotations.append(
                 Annotation(
-                    submission_id=id_,
+                    id=id_,
                     brand=brand,
                     start_pos=match.start(),
                     end_pos=match.end()
                 )
             )
     return annotations
+
+def get_products(cursor: sqlite3.Cursor) -> List[Tuple[str, str, str]]:
+    cursor.execute("select id, brand, description from products where description is not null")
+    return [
+        (str(id_), process(brand), process(description))
+        for id_, brand, description in cursor
+    ]
+
+def get_titles(cursor: sqlite3.Cursor) -> List[Tuple[str, str]]:
+    cursor.execute("select id, title from submissions")
+    return [(s_id, process(title)) for s_id, title in cursor]
 
 def main() -> None:
     parser = base_parser(description=__doc__)
@@ -98,12 +109,15 @@ def main() -> None:
 
     with sqlite3.connect(args.conn) as conn:
         cursor = conn.cursor()
-        cursor.execute("select id, title from submissions")
-        titles = [(s_id, process(title)) for s_id, title in cursor]
+        titles = get_titles(cursor)
+        products = get_products(cursor)
 
     annotations = []
     for s_id, title in titles:
         annotations.extend(make_annotations(title, known_brands, s_id))
+
+    for p_id, brand, description in products:
+        annotations.extend(make_annotations(description, [brand], p_id))
 
     with open(args.dst, "w") as output_fh:
         writer = DictWriter(output_fh, annotation_fields)

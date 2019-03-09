@@ -87,6 +87,6 @@ class TestMakeAnnotations(object):
         annotations = make_annotations(title, brands, s_id)
 
         assert len(annotations) == 2
-        assert all(a.submission_id == s_id for a in annotations)
+        assert all(a.id == s_id for a in annotations)
         assert annotations[0].brand == "Alden"
         assert annotations[1].brand == "JCrew"
