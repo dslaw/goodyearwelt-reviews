@@ -1,0 +1,14 @@
+{
+  "product": [
+    {
+      "brandName": "UGG",
+      "brandId": "288",
+      "productName": "Classic Short",
+      "defaultProductUrl": "https://www.zappos.com/product/7324205",
+      "defaultImageUrl": null,
+      "description": "",
+      "productId": "7324205"
+    }
+  ],
+  "statusCode": "200"
+}

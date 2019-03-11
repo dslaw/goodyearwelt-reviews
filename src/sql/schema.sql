@@ -56,3 +56,25 @@ create table images (
     foreign key (media_id) references medias(id),
     foreign key (album_id) references albums(id)
 );
+
+/* Zappos. */
+create table searches (
+    brand varchar not null,
+    product_id integer not null,
+    product_name varchar not null,
+    category varchar not null,
+
+    search_query varchar not null,
+    date_created datetime default current_timestamp
+);
+create index product_id_idx on searches(product_id);
+
+create table products (
+    id integer primary key,
+    brand varchar not null,
+    name varchar not null,
+    default_url varchar not null,
+    description varchar,
+
+    date_created datetime default current_timestamp
+);

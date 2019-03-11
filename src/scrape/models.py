@@ -116,3 +116,37 @@ class Image:
         self.uploaded_utc = datetime
         self.mimetype = type
         self.url = link
+
+@dataclass
+class ProductSearchResult:
+    brandName: InitVar[str]
+    brand: str = field(init=False)
+    productId: InitVar[str]
+    product_id: int = field(init=False)
+    productName: InitVar[str]
+    product_name: str = field(init=False)
+    categoryFacet: InitVar[str]
+    category: str = field(init=False)
+    search_query: str
+
+    def __post_init__(self, brandName: str, productId: str, productName: str, categoryFacet: str, **_):  # noqa: E501
+        self.brand = brandName
+        self.product_id = int(productId)
+        self.product_name = productName
+        self.category = categoryFacet
+
+@dataclass
+class Product:
+    id: int
+    brandName: InitVar[str]
+    brand: str = field(init=False)
+    productName: InitVar[str]
+    name: str = field(init=False)
+    defaultProductUrl: InitVar[str]
+    default_url: str = field(init=False)
+    description: Optional[str]
+
+    def __post_init__(self, brandName: str, productName: str, defaultProductUrl: str, **_):  # noqa: E501
+        self.brand = brandName
+        self.name = productName
+        self.default_url = defaultProductUrl
