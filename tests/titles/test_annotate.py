@@ -1,6 +1,6 @@
 import pytest
 
-from src.titles.find_brands import (
+from src.titles.annotate import (
     make_annotations,
     process,
     sub_all,
