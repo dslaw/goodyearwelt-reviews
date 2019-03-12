@@ -1,4 +1,9 @@
-"""Find known brands in submission titles."""
+"""Create NER annotations.
+
+For titles from goodyearwelt submissions, annotations are created
+based on matches to known brands. For Zappos' products, the brand
+in the product metadata is used.
+"""
 
 from csv import DictWriter
 from dataclasses import asdict, dataclass, fields
@@ -88,9 +93,15 @@ def make_annotations(doc: str, brands: Iterable[str], id_: str) -> List[Annotati
     return annotations
 
 def get_products(cursor: sqlite3.Cursor) -> List[Tuple[str, str, str]]:
-    cursor.execute("select id, brand, description from products where description is not null")
+    cursor.execute(
+        """
+        select cast(id as text), brand, description
+        from products
+        where description is not null
+        """
+    )
     return [
-        (str(id_), process(brand), process(description))
+        (id_, process(brand), process(description))
         for id_, brand, description in cursor
     ]
 
