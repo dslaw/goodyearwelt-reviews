@@ -2,7 +2,9 @@ import pytest
 
 from src.titles.annotate import (
     make_annotations,
+    normalize_ws,
     process,
+    remove_tag,
     sub_all,
     sub_if,
 )
@@ -51,6 +53,33 @@ class TestSubAll(object):
         repl = "A"
         expected = "AAbcde"
         assert sub_all(pattern, repl, string) == expected
+
+class TestRemoveTag(object):
+    @pytest.mark.parametrize(
+        "string, expected", [
+            ("[Review] Brand review", " Brand review"),
+            ("[Initial Impressions] Brand review", " Brand review"),
+            ("(Review) Brand review", " Brand review"),
+            ("Brand review (MTO)", "Brand review "),
+        ], ids=["Brackets", "Multiple-words", "Parens", "At-end"]
+    )
+    def test_removes_tag(self, string, expected):
+        assert remove_tag(string) == expected
+
+class TestNormalizeWS(object):
+    def test_removes_multiple_spaces(self):
+        string = "foo  bar"
+        expected = "foo bar"
+        assert normalize_ws(string) == expected
+
+    def test_doesnt_remove_single_spaces(self):
+        string = "foo bar"
+        assert normalize_ws(string) == string
+
+    def test_removes_trailing(self):
+        string = " foo bar "
+        expected = "foo bar"
+        assert normalize_ws(string) == expected
 
 class TestProcess(object):
     def test_unescapes_html(self):

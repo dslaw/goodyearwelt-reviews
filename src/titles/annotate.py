@@ -51,12 +51,22 @@ def sub_abbreviations(string: str) -> str:
         string = sub_if(pattern, replacement, string)
     return string
 
+def remove_tag(string: str) -> str:
+    brackets_pattern = r"\[[\w\s]+\]"
+    parens_pattern = r"\([\w\s]+\)"
+    string = sub_if(brackets_pattern, "", string)
+    return sub_if(parens_pattern, "", string)
+
+def normalize_ws(string: str) -> str:
+    return sub_all(r"\s+", " ", string).strip()
+
 def process(title: str) -> str:
     escaped = html.unescape(title)
+    untagged = remove_tag(escaped)
 
     # Both ampersands and "and" are used. The latter, as part of
     # a name, is undetectable via regex, so we replace the former.
-    spaced = sub_if(r"([^\s])&([^\s])", r"\1 & \2", escaped)
+    spaced = sub_if(r"([^\s])&([^\s])", r"\1 & \2", untagged)
     compounded = sub_if(r"\s&\s", " and ", spaced)
 
     # e.g. white's -> whites, red wing's -> red wings
@@ -67,7 +77,9 @@ def process(title: str) -> str:
 
     # Account for known abbreviations.
     expanded = sub_abbreviations(undotted)
-    return expanded
+
+    normalized = normalize_ws(expanded)
+    return normalized
 
 @dataclass(frozen=True)
 class Annotation:
