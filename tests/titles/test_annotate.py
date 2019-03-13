@@ -61,7 +61,8 @@ class TestRemoveTag(object):
             ("[Initial Impressions] Brand review", " Brand review"),
             ("(Review) Brand review", " Brand review"),
             ("Brand review (MTO)", "Brand review "),
-        ], ids=["Brackets", "Multiple-words", "Parens", "At-end"]
+            ("[1-yr Review] Brand review", " Brand review"),
+        ], ids=["Brackets", "Multiple-words", "Parens", "At-end", "Special-chars"]
     )
     def test_removes_tag(self, string, expected):
         assert remove_tag(string) == expected

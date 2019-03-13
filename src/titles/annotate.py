@@ -52,8 +52,8 @@ def sub_abbreviations(string: str) -> str:
     return string
 
 def remove_tag(string: str) -> str:
-    brackets_pattern = r"\[[\w\s]+\]"
-    parens_pattern = r"\([\w\s]+\)"
+    brackets_pattern = r"\[.+\]"
+    parens_pattern = r"\(.+\)"
     string = sub_if(brackets_pattern, "", string)
     return sub_if(parens_pattern, "", string)
 
