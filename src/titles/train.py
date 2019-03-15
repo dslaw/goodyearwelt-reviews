@@ -22,6 +22,16 @@ holdout_brands = {
         "Zonkey"
     )
 }
+output_dir = Path("data")
+output_prefix = "titles"
+params = {
+    "dropout_range": (.8, .5),
+    "label": entity_label,
+    "n_epochs": 120,
+    "random_state": 13,
+}
+run_size = 30
+train_proportion = .7
 
 
 def get_batches(training_data):
@@ -150,17 +160,6 @@ class IncrementalTrainer(object):
 
 
 if __name__ == "__main__":
-    output_dir = Path("data")
-    output_prefix = "titles"
-    params = {
-        "dropout_range": (.8, .5),
-        "label": entity_label,
-        "n_epochs": 120,
-        "random_state": 13,
-    }
-    run_size = 30
-    train_proportion = .7
-
     input_filename = "data/title_brand_annotations.csv"
     db_filename = "data/posts.sqlite"
 
