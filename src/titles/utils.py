@@ -54,7 +54,7 @@ def make_evaluation(model: Any, annotations: List[Annotation]) -> List[DocGold]:
     doc_golds = []
     for text, annotation in annotations:
         doc = model.make_doc(text)
-        gold = GoldParse(doc, **annotations)
+        gold = GoldParse(doc, **annotation)
         doc_golds.append((doc, gold))
     return doc_golds
 
