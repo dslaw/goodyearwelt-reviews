@@ -8,7 +8,7 @@ import pickle
 import spacy
 
 from src.titles.annotate import process
-from src.titles.utils import get_data, make_training
+from src.titles.utils import get_data, make_training, split
 
 
 entity_label = "ORG"
@@ -159,13 +159,16 @@ if __name__ == "__main__":
         "random_state": 13,
     }
     run_size = 30
+    train_proportion = .7
 
     input_filename = "data/title_brand_annotations.csv"
     db_filename = "data/posts.sqlite"
 
     try:
         trainer = IncrementalTrainer.from_disk(output_dir, output_prefix)
+        print(f"Loaded existing model from {output_dir}")
     except FileNotFoundError:
+        print("Initializing new model")
         nlp = spacy.load("en_core_web_sm")
         trainer = IncrementalTrainer(nlp, **params)
 
@@ -174,14 +177,9 @@ if __name__ == "__main__":
     rest = df[~is_holdout].reset_index(drop=True)
 
     annotations = make_training(rest, label=entity_label)
+    training_documents, _ = split(annotations, frac=train_proportion)
 
-    rs = RandomState(131313)
-    n_documents = len(annotations)
-    train_size = int(.7 * n_documents)
-    print(f"Training with: {train_size} / {n_documents} documents")
-
-    training_indices = rs.choice(n_documents, size=train_size, replace=False)
-    training_documents = [annotations[i] for i in training_indices]
-
+    n_training = len(training_documents)
+    print(f"Training with: {n_training} / {len(annotations)} documents")
     trainer.fit(training_documents, stop_after=run_size, copy=False)
     trainer.to_disk(output_dir, output_prefix)

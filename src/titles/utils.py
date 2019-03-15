@@ -1,3 +1,4 @@
+from numpy.random import RandomState
 from typing import Any, Dict, List, Tuple
 import pandas as pd
 import sqlite3
@@ -56,3 +57,21 @@ def make_evaluation(model: Any, annotations: List[Annotation]) -> List[DocGold]:
         gold = GoldParse(doc, **annotations)
         doc_golds.append((doc, gold))
     return doc_golds
+
+def split(annotations: List[Annotation], frac: float, seed: int = 1313) -> Tuple[List[Annotation], List[Annotation]]:  # noqa: E501
+    # Split into test/train, by document.
+    if frac <= 0 or frac >= 1:
+        raise ValueError
+
+    rs = RandomState(seed)
+    n_documents = len(annotations)
+    train_size = int(frac * n_documents)
+
+    training_indices = set(rs.choice(n_documents, size=train_size, replace=False))
+    training_documents = [annotations[i] for i in training_indices]
+    test_documents = [
+        annotation
+        for i, annotation in enumerate(annotations)
+        if i not in training_indices
+    ]
+    return training_documents, test_documents
