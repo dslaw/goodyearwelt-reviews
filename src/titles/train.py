@@ -2,13 +2,15 @@
 
 from numpy.random import RandomState
 from pathlib import Path
+from sklearn.model_selection import ShuffleSplit
+from sklearn.utils import check_random_state
 from spacy.util import compounding, decaying, minibatch
 import pandas as pd
 import pickle
 import spacy
 
 from src.titles.annotate import process
-from src.titles.utils import get_data, make_training, split
+from src.titles.utils import get_data, make_training, split_holdout
 
 
 entity_label = "ORG"
@@ -44,15 +46,6 @@ def get_batches(training_data):
         max_batch_size /= 2
     batch_size = compounding(1, max_batch_size, 1.001)
     return minibatch(training_data, size=batch_size)
-
-def check_random_state(random_state):
-    if isinstance(random_state, RandomState):
-        return random_state
-    if random_state is None:
-        return RandomState(None)
-    if isinstance(random_state, int) or hasattr(random_state, "__iter__"):
-        return RandomState(random_state)
-    raise ValueError
 
 class IncrementalTrainer(object):
     """Pause and unpause training."""
@@ -171,12 +164,18 @@ if __name__ == "__main__":
         nlp = spacy.load("en_core_web_sm")
         trainer = IncrementalTrainer(nlp, **params)
 
+    # Holdout some brands entirely, as the model should be able to recognize
+    # new brands.
     df = get_data(db_filename, input_filename)
     is_holdout = df.brand.isin(holdout_brands)
     rest = df[~is_holdout].reset_index(drop=True)
 
+    # Train/test split, where the test split implicitly joins the holdout
+    # set.
     annotations = make_training(rest, label=entity_label)
-    training_documents, _ = split(annotations, frac=train_proportion)
+    ss = ShuffleSplit(n_splits=1, train_size=train_proportion, random_state=13)
+    train_idx, _ = next(ss.split(annotations))
+    training_documents = [annotations[i] for i in train_idx]
 
     n_training = len(training_documents)
     print(f"Training with: {n_training} / {len(annotations)} documents")

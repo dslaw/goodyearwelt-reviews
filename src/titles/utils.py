@@ -1,14 +1,16 @@
 from numpy.random import RandomState
-from typing import Any, Dict, List, Tuple
-import pandas as pd
-import sqlite3
 from spacy.gold import GoldParse
 from spacy.tokens import Doc
+from typing import Any, Dict, List, Tuple, TypeVar
+import pandas as pd
+import sqlite3
 
 from src.titles.annotate import process
 
 
 def get_data(db_name: str, annotations_filename: str) -> pd.DataFrame:
+    """Load annotated brand data."""
+
     annotations = pd.read_csv(annotations_filename)
     with sqlite3.connect(db_name) as conn:
         titles = pd.read_sql(
@@ -36,6 +38,8 @@ Entity = Tuple[int, int, str]
 Annotation = Tuple[str, Dict[str, List[Entity]]]
 
 def make_training(df: pd.DataFrame, label: str, grouper: str = "id") -> List[Annotation]:
+    """Make spacy compatible annotations from training data."""
+
     annotated = []
     for _, df_g in df.groupby(grouper):
         # There should only be one document within each group.
@@ -51,6 +55,8 @@ DocGold = Tuple[Doc, GoldParse]
 
 # TODO: do spacy langs have a base class?
 def make_evaluation(model: Any, annotations: List[Annotation]) -> List[DocGold]:
+    """Make spacy document and gold objects."""
+
     doc_golds = []
     for text, annotation in annotations:
         doc = model.make_doc(text)
@@ -58,20 +64,22 @@ def make_evaluation(model: Any, annotations: List[Annotation]) -> List[DocGold]:
         doc_golds.append((doc, gold))
     return doc_golds
 
-def split(annotations: List[Annotation], frac: float, seed: int = 1313) -> Tuple[List[Annotation], List[Annotation]]:  # noqa: E501
-    # Split into test/train, by document.
+T = TypeVar("T")
+def split_holdout(ents: List[T], frac: float, seed: int = 13) -> Tuple[List[T], List[T]]:
+    """Split holdout from main dataset, at document-level."""
+
     if frac <= 0 or frac >= 1:
         raise ValueError
 
     rs = RandomState(seed)
-    n_documents = len(annotations)
-    train_size = int(frac * n_documents)
+    n_documents = len(ents)
+    holdout_size = int(frac * n_documents)
 
-    training_indices = set(rs.choice(n_documents, size=train_size, replace=False))
-    training_documents = [annotations[i] for i in training_indices]
-    test_documents = [
+    holdout_indices = set(rs.choice(n_documents, size=holdout_size, replace=False))
+    holdout_documents = [ents[i] for i in holdout_indices]
+    rest = [
         annotation
-        for i, annotation in enumerate(annotations)
-        if i not in training_indices
+        for i, annotation in enumerate(ents)
+        if i not in holdout_indices
     ]
-    return training_documents, test_documents
+    return rest, holdout_documents
