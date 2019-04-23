@@ -1,16 +1,14 @@
 """Update spacy's NER model to recognize footwear brands."""
 
-from numpy.random import RandomState
 from pathlib import Path
 from sklearn.model_selection import ShuffleSplit
 from sklearn.utils import check_random_state
 from spacy.util import compounding, decaying, minibatch
-import pandas as pd
 import pickle
 import spacy
 
 from src.titles.annotate import process
-from src.titles.utils import get_data, make_training, split_holdout
+from src.titles.utils import get_data, make_training
 
 
 entity_label = "ORG"
