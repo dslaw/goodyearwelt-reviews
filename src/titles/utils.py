@@ -8,6 +8,11 @@ import sqlite3
 from src.titles.annotate import process
 
 
+T = TypeVar("T")
+DocGold = Tuple[Doc, GoldParse]
+Lang = Any  # TODO: do spacy langs have a base class?
+
+
 def get_data(db_name: str, annotations_filename: str) -> pd.DataFrame:
     """Load annotated brand data."""
 
@@ -51,10 +56,7 @@ def make_training(df: pd.DataFrame, label: str, grouper: str = "id") -> List[Ann
         annotated.append((text, {"entities": entities}))
     return annotated
 
-DocGold = Tuple[Doc, GoldParse]
-
-# TODO: do spacy langs have a base class?
-def make_evaluation(model: Any, annotations: List[Annotation]) -> List[DocGold]:
+def make_evaluation(model: Lang, annotations: List[Annotation]) -> List[DocGold]:
     """Make spacy document and gold objects."""
 
     doc_golds = []
@@ -64,7 +66,6 @@ def make_evaluation(model: Any, annotations: List[Annotation]) -> List[DocGold]:
         doc_golds.append((doc, gold))
     return doc_golds
 
-T = TypeVar("T")
 def split_holdout(ents: List[T], frac: float, seed: int = 13) -> Tuple[List[T], List[T]]:
     """Split holdout from main dataset, at document-level."""
 
