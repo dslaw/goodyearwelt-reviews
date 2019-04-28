@@ -6,10 +6,18 @@ from sklearn.covariance import graphical_lasso
 import numpy as np
 
 
-def props(counts):
-    n_rows = counts.shape[0]
-    marginal_counts = np.sum(counts, axis=1).reshape(n_rows, -1)
-    return counts / marginal_counts
+def estimate_transmat(n_classes, X, y, lengths):
+    """MLE transition probabilities."""
+
+    counts = np.zeros((n_classes, n_classes), dtype=np.int)
+    for i, j in iter_from_X_lengths(X, lengths):
+        for t in range(i + 1, j):
+            prev = y[t - 1]
+            curr = y[t]
+            counts[prev, curr] += 1
+
+    marginals = np.sum(counts, axis=1).reshape(n_classes, -1)
+    return counts / marginals
 
 class HMM(GaussianHMM):
     """Supervised Hidden Markov model with Gaussian emissions."""
@@ -18,6 +26,7 @@ class HMM(GaussianHMM):
         self.algorithm = algorithm
         self.covariance_type = "full"
 
+    # TODO: handle vanishing variance.
     def _estimate(self, X):
         mean = np.mean(X, axis=0)
         cov = np.cov(X.T)
@@ -36,14 +45,14 @@ class HMM(GaussianHMM):
             # Use overall proportions, as if only the first
             # observation in the sequence is used the probability
             # will be fixed.
-            startprob = class_counts / np.sum(class_counts)
+            start_counts = class_counts
         else:
             start_counts = np.zeros((n_classes,), dtype=np.int)
-            for i, j in iter_from_X_lengths(X, lengths):
+            for i, _ in iter_from_X_lengths(X, lengths):
                 start_class = y[i]
                 start_counts[start_class] += 1
 
-            startprob = props(start_counts)
+        startprob = start_counts / np.sum(start_counts)
 
         # Empirical parameters of Gaussian distributions.
         # XXX: How to reconcile this with `lengths`, if at all?
@@ -55,13 +64,7 @@ class HMM(GaussianHMM):
             covs.append(cov[np.newaxis, :])
 
         # Empirical transition probabilities.
-        trans_counts = np.zeros((n_classes, n_classes), dtype=np.int)
-        for t in range(1, n_samples):
-            prev = y[t - 1]
-            curr = y[t]
-            trans_counts[prev, curr] += 1
-
-        transmat = props(trans_counts)
+        transmat = estimate_transmat(n_classes, X, y, lengths)
 
         self.startprob_ = startprob
         self.transmat_ = transmat
