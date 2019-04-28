@@ -4,7 +4,6 @@ from sklearn import metrics
 from sklearn.externals import joblib
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 import pandas as pd
@@ -38,45 +37,31 @@ for k, (train_idx, test_idx) in enumerate(kf.split(X)):
     y_test = np.concatenate(y[test_idx])
     lengths_test = np.array([len(seq) for seq in y[test_idx]])
 
-    pipelines = [
-        Pipeline([
-            ("scale", StandardScaler(copy=True)),
-            ("logit", LogisticRegression(
-                penalty="l1",
-                solver="liblinear",
-                random_state=13
-            )),
-        ]),
-        # See Das et al (2015), section 3 for justification of assuming embeddings
-        # as multivariate Gaussian distributed.
-        # https://rajarshd.github.io/papers/acl2015.pdf
-        Pipeline([
-            ("hmm", HMM(algorithm="viterbi")),
-        ]),
-        Pipeline([
-            ("scale", StandardScaler(copy=True)),
-            ("hmm_reg", RegularizedHMM(
-                algorithm="viterbi",
-                alpha=.5,
-                assume_centered=True
-            )),
-        ]),
+    # See Das et al (2015), section 3 for justification of assuming embeddings
+    # are multivariate Gaussian.
+    # https://rajarshd.github.io/papers/acl2015.pdf
+    models = [
+        ("logit", LogisticRegression(penalty="l1", solver="liblinear", random_state=13)),
+        ("hmm", HMM(algorithm="viterbi")),
+        ("hmm_reg", RegularizedHMM(algorithm="viterbi", alpha=.5, assume_centered=True)),
     ]
 
-    for pipeline in pipelines:
-        model_name, _ = pipeline.steps[-1]
-        print(f"Running {model_name} for fold {k}")
+    scaler = StandardScaler(copy=True).fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_test = scaler.transform(X_test)
 
-        pipeline.fit(X_train, y_train)
+    for name, model in models:
+        print(f"Running {name} for fold {k}")
 
-        if model_name.startswith("hmm"):
-            # XXX: This corresponds to the log-loss of MAP decoding.
-            _, model = pipeline.steps[-1]
+        model.fit(X_train, y_train)
+
+        # XXX: For HMMs, using `predict_proba` corresponds to MAP decoding.
+        if "HMM" in name:
             pred_train = model.predict_proba(X_train, lengths=lengths_train)
             pred_test = model.predict_proba(X_test, lengths=lengths_test)
         else:
-            pred_train = pipeline.predict_proba(X_train)
-            pred_test = pipeline.predict_proba(X_test)
+            pred_train = model.predict_proba(X_train)
+            pred_test = model.predict_proba(X_test)
 
         train_loss = metrics.log_loss(y_train, pred_train[:, pos_class])
         test_loss = metrics.log_loss(y_test, pred_test[:, pos_class])
@@ -90,7 +75,7 @@ for k, (train_idx, test_idx) in enumerate(kf.split(X)):
         test_recall = metrics.recall_score(y_test, label_test)
 
         cv_values.append({
-            "name": model_name,
+            "name": name,
             "k": k,
             "train": True,
             "log_loss": train_loss,
@@ -98,7 +83,7 @@ for k, (train_idx, test_idx) in enumerate(kf.split(X)):
             "recall": train_recall,
         })
         cv_values.append({
-            "name": model_name,
+            "name": name,
             "k": k,
             "train": False,
             "log_loss": test_loss,
