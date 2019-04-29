@@ -1,4 +1,3 @@
-from numpy.random import RandomState
 from spacy.gold import GoldParse
 from spacy.tokens import Doc
 from typing import Any, Dict, List, Tuple, TypeVar
@@ -65,22 +64,3 @@ def make_evaluation(model: Lang, annotations: List[Annotation]) -> List[DocGold]
         gold = GoldParse(doc, **annotation)
         doc_golds.append((doc, gold))
     return doc_golds
-
-def split_holdout(ents: List[T], frac: float, seed: int = 13) -> Tuple[List[T], List[T]]:
-    """Split holdout from main dataset, at document-level."""
-
-    if frac <= 0 or frac >= 1:
-        raise ValueError
-
-    rs = RandomState(seed)
-    n_documents = len(ents)
-    holdout_size = int(frac * n_documents)
-
-    holdout_indices = set(rs.choice(n_documents, size=holdout_size, replace=False))
-    holdout_documents = [ents[i] for i in holdout_indices]
-    rest = [
-        annotation
-        for i, annotation in enumerate(ents)
-        if i not in holdout_indices
-    ]
-    return rest, holdout_documents

@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from src.titles.hmm import HMM, RegularizedHMM
-from src.titles.utils import split_holdout
 
 
 data_filename = "data/title_embeddings.pkl"
@@ -17,12 +16,12 @@ output_filename = "data/model_cv.csv"
 
 pos_class = 1
 
-y, X = joblib.load(data_filename)
-available, _ = split_holdout(list(zip(y, X)), frac=.1)
-y, X = map(np.asarray, zip(*available))
+data = joblib.load(data_filename)
+y = data["main"]["y"]
+X = data["main"]["X"]
 
 
-# Each document is an indepdent sequence of tokens. For sequential
+# Each document is an independent sequence of tokens. For sequential
 # models, the model should perform similary regardless of the order
 # of sequences. For iid models, splitting at the document-level instead
 # of over tokens may pose problematic as classes are highly imbalanced.
