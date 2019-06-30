@@ -15,16 +15,10 @@ import sqlite3
 from src.scrape.common import base_parser
 
 
-def sub_if(pattern: str, replacement: str, string: str, **kwargs) -> str:
-    matched = re.search(pattern, string, **kwargs)
-    if matched is None:
-        return string
-    return re.sub(pattern, replacement, string, **kwargs)
-
 def sub_all(pattern: str, replacement: str, string: str, **kwargs) -> str:
     while string:
         previous_len = len(string)
-        string = sub_if(pattern, replacement, string, **kwargs)
+        string = re.sub(pattern, replacement, string, **kwargs)
         if previous_len == len(string):
             break
     return string
@@ -48,14 +42,14 @@ abbreviations = {
 def sub_abbreviations(string: str) -> str:
     for fixed, replacement in abbreviations.items():
         pattern = rf"\b{fixed}\b"
-        string = sub_if(pattern, replacement, string)
+        string = re.sub(pattern, replacement, string)
     return string
 
 def remove_tag(string: str) -> str:
     brackets_pattern = r"\[.+\]"
     parens_pattern = r"\(.+\)"
-    string = sub_if(brackets_pattern, "", string)
-    return sub_if(parens_pattern, "", string)
+    string = re.sub(brackets_pattern, "", string)
+    return re.sub(parens_pattern, "", string)
 
 def normalize_ws(string: str) -> str:
     return sub_all(r"\s+", " ", string).strip()
@@ -66,11 +60,11 @@ def process(title: str) -> str:
 
     # Both ampersands and "and" are used. The latter, as part of
     # a name, is undetectable via regex, so we replace the former.
-    spaced = sub_if(r"([^\s])&([^\s])", r"\1 & \2", untagged)
-    compounded = sub_if(r"\s&\s", " and ", spaced)
+    spaced = re.sub(r"([^\s])&([^\s])", r"\1 & \2", untagged)
+    compounded = re.sub(r"\s&\s", " and ", spaced)
 
     # e.g. white's -> whites, red wing's -> red wings
-    unpossessed = sub_if(r"(\w+)'s", r"\1", compounded, flags=re.IGNORECASE)
+    unpossessed = re.sub(r"(\w+)'s", r"\1", compounded, flags=re.IGNORECASE)
 
     # e.g. R.M. Williams -> RM Williams, RM. Williams -> RM Williams
     undotted = sub_all(r"\.", "", unpossessed)

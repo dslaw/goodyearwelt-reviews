@@ -6,31 +6,8 @@ from src.titles.annotate import (
     process,
     remove_tag,
     sub_all,
-    sub_if,
 )
 
-
-class TestSubIf(object):
-    def test_no_match(self):
-        string = "Hello, world"
-        pattern = "Hey"
-        repl = "Hi"
-        expected = string
-        assert sub_if(pattern, repl, string) == expected
-
-    def test_substitutes(self):
-        string = "Hello, world"
-        pattern = "Hello"
-        repl = "Hi"
-        expected = "Hi, world"
-        assert sub_if(pattern, repl, string) == expected
-
-    def test_pattern_group(self):
-        string = "Hello, world"
-        pattern = r"^(\w+),"
-        repl = r"\1!"
-        expected = "Hello! world"
-        assert sub_if(pattern, repl, string) == expected
 
 class TestSubAll(object):
     def test_no_matches(self):
