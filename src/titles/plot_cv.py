@@ -12,22 +12,16 @@ def read(filename):
 
 
 df = read("data/model_cv.csv")
-gb = df.groupby("name")
+long = pd.melt(
+    df,
+    id_vars=["k", "name", "split"],
+    value_vars=["precision", "recall"],
+    value_name="measure",
+    id_name="measure_type",
+)
 
-fig, axes = plt.subplots(1, len(gb))
-for ax, (name, df_g) in zip(axes, gb):
-    ax = sns.lineplot(x="k", y="log_loss", hue="split", data=df_g, ax=ax)
-    ax.legend(title=None)
-    ax.set_title(name.title())
-
-fig, axes = plt.subplots(1, len(gb))
-for ax, (name, df_g) in zip(axes, gb):
-    ax = sns.lineplot(x="k", y="precision", hue="split", data=df_g, ax=ax)
-    ax.legend(title=None)
-    ax.set_title(name.title())
-
-fig, axes = plt.subplots(1, len(gb))
-for ax, (name, df_g) in zip(axes, gb):
-    ax = sns.lineplot(x="k", y="recall", hue="split", data=df_g, ax=ax)
-    ax.legend(title=None)
-    ax.set_title(name.title())
+g = (
+    sns.FacetGrid(long, col="variable", row="name", hue="split", sharey=False)
+    .map(sns.lineplot, "k", "measure")
+    .add_legend()
+)

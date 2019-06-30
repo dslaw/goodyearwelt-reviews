@@ -128,7 +128,7 @@ def main() -> None:
     args = parser.parse_args()
 
     with open(args.brands) as fh:
-        known_brands = {process(brand.strip()) for brand in fh.readlines()}
+        known_brands = {process(brand.strip()) for brand in fh}
 
     with sqlite3.connect(args.conn) as conn:
         cursor = conn.cursor()
