@@ -1,0 +1,7 @@
+hmmlearn
+joblib
+jupyter
+pandas
+scikit-learn
+seaborn
+spacy

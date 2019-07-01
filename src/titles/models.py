@@ -1,10 +1,10 @@
 """Perform cross-validation for simple models using word embeddings."""
 
 from sklearn import metrics
-from sklearn.externals import joblib
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
+import joblib
 import numpy as np
 import pandas as pd
 

@@ -1,7 +1,7 @@
 """Create quantitative features from annotated documents."""
 
-from sklearn.externals import joblib
 from typing import Any, List, Tuple
+import joblib
 import numpy as np
 import spacy
 
