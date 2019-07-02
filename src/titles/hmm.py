@@ -79,10 +79,9 @@ class HMM(GaussianHMM):
 
 
 class RegularizedHMM(HMM):
-    def __init__(self, algorithm="viterbi", alpha=0, assume_centered=False, max_iter=100):
+    def __init__(self, algorithm="viterbi", alpha=0, max_iter=100):
         super().__init__(algorithm=algorithm)
         self.alpha = alpha  # TODO: validate
-        self.assume_centered = assume_centered
         self.max_iter = max_iter
 
     def _estimate(self, X):
